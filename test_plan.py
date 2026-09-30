@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from demo import aidrin_check
 from plan import appfl_config, validate_plan
 
 
@@ -26,6 +28,15 @@ class PlanTests(unittest.TestCase):
     def test_reject_duplicate_check(self):
         with self.assertRaises(ValueError):
             validate_plan({**GOOD, "checks": ["sample_size", "sample_size"]}, {"outcome"})
+
+    @patch("demo.subprocess.run")
+    def test_aidrin_command_uses_local_csv(self, run):
+        run.return_value.stdout = '{"metric": "class-imbalance"}'
+        result = aidrin_check([0, 1], "outcome")
+        self.assertEqual(result["metric"], "class-imbalance")
+        args = run.call_args.args[0]
+        self.assertEqual(args[:3], ["aidrin", "run", "class-imbalance"])
+        self.assertEqual(args[-1], "outcome")
 
 
 if __name__ == "__main__":
