@@ -1,0 +1,5 @@
+{
+  "task": "binary_classification",
+  "target": "outcome",
+  "checks": ["sample_size", "class_imbalance"]
+}
