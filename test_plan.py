@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from demo import aidrin_check
+from demo import aidrin_check, should_run_aidrin
 from plan import appfl_config, validate_plan
 
 
@@ -37,6 +37,11 @@ class PlanTests(unittest.TestCase):
         args = run.call_args.args[0]
         self.assertEqual(args[:3], ["aidrin", "run", "class-imbalance"])
         self.assertEqual(args[-1], "outcome")
+
+    def test_aidrin_follows_approved_checks(self):
+        self.assertTrue(should_run_aidrin(GOOD, True))
+        self.assertFalse(should_run_aidrin(GOOD, False))
+        self.assertFalse(should_run_aidrin({**GOOD, "checks": ["sample_size"]}, True))
 
 
 if __name__ == "__main__":

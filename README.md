@@ -1,10 +1,10 @@
 # APPFL readiness plan demo
 
-This is a small first step toward the idea Zilinghan suggested: letting an assistant propose data-readiness checks for a new dataset, while a person reviews the plan before any hospital runs it.
+Zilinghan suggested an AIDRIN-APPFL connection. I started with the handoff between a plan and APPFL's existing checks.
 
-Right now the plan is written in `example_plan.json`, not produced by AIDRIN. The demo checks that the proposed checks are supported, waits for `--approve`, then gives the same settings to four synthetic hospitals through APPFL. Each hospital runs APPFL's existing sample-size and class-imbalance checks. APPFL saves an HTML report. No real patient data is involved.
+I still write the plan in `example_plan.json` by hand, but the program checks the requested metrics and shows the plan before anything runs. Once approved, four fake hospitals run APPFL's sample-size and class-imbalance checks and get an HTML report. Hospital C has only 4 positive outcomes among 80 patients. Its imbalance stands out.
 
-Run it with Python 3.10 and APPFL installed (`pip install appfl`):
+With Python 3.10 and APPFL installed (`pip install appfl`), run:
 
 ```bash
 python -X utf8 demo.py
@@ -12,14 +12,12 @@ python -X utf8 demo.py --approve
 python -X utf8 -m unittest -v
 ```
 
-If you also install the [AIDRIN CLI](https://aidrin.readthedocs.io/en/latest/cli_installation.html) (`pip install aidrin`), you can run its class-imbalance check locally at each synthetic hospital:
+The first command only displays the plan. To try the AIDRIN part, [install its CLI](https://aidrin.readthedocs.io/en/latest/cli_installation.html) (`pip install aidrin`) and run:
 
 ```bash
 python -X utf8 demo.py --approve --aidrin
 ```
 
-The script writes a temporary CSV for one hospital at a time, asks AIDRIN to check it, and removes the CSV afterward. It prints AIDRIN's JSON separately from APPFL's results because their imbalance scores use different scales. In my test, hospital C scored 0.90 in AIDRIN and 0.64 in APPFL; both showed it was more imbalanced than the balanced sites. If AIDRIN is in another environment, pass its executable path with `--aidrin-command`.
+For each fake hospital, the script makes a temporary CSV, runs AIDRIN's class-imbalance check locally, and deletes the CSV after the check finishes. AIDRIN runs only if `class_imbalance` was approved. In my run, hospital C scored 0.90 in AIDRIN and 0.64 in APPFL. Different scales. I show both results separately, and `--aidrin-command` lets you point to AIDRIN if it's installed in another environment.
 
-The first command only shows the plan. The second actually runs the checks. Hospital C has 4 positive outcomes out of 80, so its class imbalance should stand out from the balanced hospitals.
-
-The optional command really calls AIDRIN's metric, but it does **not** use AIDRIN's agent or automatically choose metrics. A next step would be to let an agent suggest the same small JSON plan, keep the validation and approval step, and test it against datasets with different column names and types. It also does not set up a production hospital network or a privacy guarantee.
+Everything here runs on one computer with synthetic data. AIDRIN checks class imbalance, but its agent does not choose the plan yet. I wrote down how I would try that in the [project plan](PLAN.md), including what I would test before proposing any change to APPFL.

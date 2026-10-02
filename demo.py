@@ -14,6 +14,10 @@ SITES = (("hospital_a", 200, 100), ("hospital_b", 120, 60),
          ("hospital_c", 80, 4), ("hospital_d", 40, 12))
 
 
+def should_run_aidrin(plan, requested):
+    return requested and "class_imbalance" in plan["checks"]
+
+
 def aidrin_check(labels, target, command="aidrin"):
     with tempfile.TemporaryDirectory() as directory:
         csv_path = Path(directory) / "local_outcomes.csv"
@@ -68,7 +72,7 @@ def run(plan, output_dir, use_aidrin=False, aidrin_command="aidrin"):
             }))
             clients.append(client)
             client.train_dataset = HospitalData(count, positives)
-            if use_aidrin:
+            if should_run_aidrin(plan, use_aidrin):
                 aidrin_results[name] = aidrin_check(
                     client.train_dataset.data_label.tolist(), plan["target"], aidrin_command
                 )
@@ -84,7 +88,7 @@ def run(plan, output_dir, use_aidrin=False, aidrin_command="aidrin"):
                 name: {key: reports[key][name] for key in plan["checks"]}
                 for name, _, _ in SITES
             },
-            "aidrin_results": aidrin_results if use_aidrin else "not run",
+            "aidrin_results": aidrin_results or "not run",
         }, indent=2))
         print(f"APPFL report: {output_dir.resolve()}")
     finally:
