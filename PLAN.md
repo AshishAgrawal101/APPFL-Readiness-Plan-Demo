@@ -1,29 +1,27 @@
-# Plan for connecting AIDRIN and APPFL
+# Proposed AIDRIN and APPFL integration
 
-I write `example_plan.json` myself right now. The next question is whether AIDRIN's existing skill can suggest useful checks from a dataset description, which a person could review before APPFL asks its clients to run anything. Patient rows stay at each client.
+Mr. Li's suggestion goes beyond the two checks in my demo. Different datasets need different readiness checks, and someone currently has to decide which checks to use or write a custom one. [APPFL supports built-in checks and custom CADRE modules](https://appfl.ai/en/stable/tutorials/examples_dr_integration.html). [AIDRIN's skill](https://aidrin.readthedocs.io/en/latest/aidrin_skill.html) helps an assistant inspect a dataset, choose metrics, confirm column roles, and explain the results. I want to see how that workflow could help people set up APPFL readiness reports with less manual work.
 
-The proposed path is `dataset description -> AIDRIN suggestion -> validation -> human approval -> APPFL client checks -> report`.
+## What I have so far
 
-## Start with the information AIDRIN needs
+The current demo reads a plan from `example_plan.json`. I chose its two checks, `sample_size` and `class_imbalance`, myself. After a person approves the plan, four simulated APPFL clients run the checks. The demo can also run AIDRIN's class-imbalance metric at each client. AIDRIN does not create the plan yet, and the four clients all run on one computer.
 
-I'd start with a few synthetic binary-classification datasets. The planner would get the task, column names and types, and an outcome column confirmed by a person. No patient rows. AIDRIN's usual workflow also looks at sample statistics, so I'd test whether this shorter description is enough. If the suggestions are poor, I would check what extra information it needs and review that information before sharing it.
+## How I would connect them
 
-## Turn the suggestion into an APPFL plan
+First, I would give the planning assistant a description of a synthetic dataset. That description would include the kind of task, its data format, column names and types when relevant, and any roles a person has confirmed, such as the outcome column. I would start without patient rows. AIDRIN's normal workflow inspects sample statistics as well, so I need to find out what information is necessary for useful suggestions and what is appropriate to share.
 
-I'd ask AIDRIN's skill for checks and short reasons, then convert its answer into the JSON format used here and validate it against APPFL's supported checks and required column roles. The validator would also catch duplicates and conflicting settings. A person could change or reject the plan before any client runs, and suggested text would never be run as code or a shell command.
+The assistant would use AIDRIN's existing metric guidance to suggest checks and explain why they fit the data. Its answer would name the required inputs and distinguish checks APPFL already supports from checks that would need a new implementation. I would begin with tabular binary-classification data, then use feedback from the AIDRIN and APPFL teams to choose another data type worth testing.
 
-I'd start with `sample_size` and `class_imbalance`, the two checks already in this demo, and leave AIDRIN's literature-search and code-generation features for later.
+Next, a small adapter would turn the suggestion into a structured plan. It would reject unknown checks, missing column roles, and conflicting settings. A person could edit or reject the plan before APPFL sends the same approved configuration to every client. For an existing APPFL check, the adapter could fill in the data-readiness configuration. If AIDRIN suggests a check APPFL lacks, I would treat it as a proposed metric or CADRE module for human review and testing. Generated Python should never be sent to hospitals to run automatically.
 
-## Run and report
+Each client would calculate the approved checks on its own data. AIDRIN might run some metrics there too, as the optional command in this demo does. The server report would say which checks ran, which sites failed, and which tool produced each result. It would not assume that similarly named AIDRIN and APPFL metrics use the same formula. Any summaries sent away from a client would need a separate privacy review.
 
-After approval, APPFL would give every client the same data-readiness settings so each one can calculate checks on its own data, with AIDRIN running a local metric where useful, as it does here. The report should name the tool behind each number and show which sites finished or failed. It must keep unlike scores separate. APPFL's and AIDRIN's imbalance scores, for example, have different scales.
+## How I would test the idea
 
-## Test before proposing an APPFL change
+I would compare the assistant's suggested plans with plans chosen by a person for several synthetic datasets. The tests should include different outcome-column names, an unclear outcome column, unsupported suggestions, and a client that fails while running a check. I would also verify that no check runs before approval and that the planning request and server report contain no patient rows. After the serial version works, I would try a local networked APPFL run.
 
-I'd try balanced and imbalanced data, a renamed outcome column, and a dataset where the outcome is unclear. I'd also propose an unsupported check and deliberately fail one client. Nothing runs before approval. Every client must get the same plan, with failures visible in the report and patient rows absent from both the planning request and server report. After that, I'd try a local networked APPFL run.
+A useful first result would show that AIDRIN can suggest reasonable checks, a person can correct the plan, and APPFL can run the approved version without someone hand-editing each client's configuration. That still would not make the system ready for real hospital data.
 
-I would compare AIDRIN's suggestions against plans chosen by a person for several synthetic datasets, and the program would stop with an explanation if the assistant chose the wrong outcome or an unsupported check. One successful demo would not tell me much about that.
+## Where I need feedback
 
-This separate repo is where I'd keep the experiments while asking the APPFL and AIDRIN teams for feedback. The subgroup-calibration PR is separate. Once the plan is tested, I could propose the smallest useful change to APPFL.
-
-I want to ask them which dataset details AIDRIN can safely use and whether this approval step fits APPFL. I also want their view on AIDRIN's role: should it run checks at each client, help select APPFL's existing checks, or both?
+I would like to ask the AIDRIN team what parts of their skill can work from a limited dataset description, and how they think custom metric suggestions should be reviewed. From the APPFL team, I would like to know where the planning and approval step belongs and what a good first contribution would be. I am keeping these experiments in this separate repo while the subgroup-calibration PR is reviewed.
